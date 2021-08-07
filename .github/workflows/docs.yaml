@@ -11,6 +11,13 @@ jobs:
         steps:
           - name: checkout repository
             uses: actions/checkout@v2
+          - name: install ubuntu requirements
+            env:
+                DRAWIO_VERSION: '14.5.1'
+            run: |
+                sudo apt update
+                wget https://github.com/jgraph/drawio-desktop/releases/download/v$DRAWIO_VERSION/drawio-amd64-$DRAWIO_VERSION.deb
+                sudo apt install -q -y ./drawio-amd64-$DRAWIO_VERSION.deb
           - name: install python
             uses: actions/setup-python@v1
             with:
@@ -22,9 +29,9 @@ jobs:
           - name: doit docs
             run: doit docs
           - name: create CNAME
-            if: github.repository == 'hat-open/hat-aio'
+            if: github.repository == 'hat-open/hat-stc'
             run: |
-                 echo "hat-aio.hat-open.com" > build/docs/CNAME
+                 echo "hat-stc.hat-open.com" > build/docs/CNAME
           - name: deploy
             uses: peaceiris/actions-gh-pages@v3
             with:
