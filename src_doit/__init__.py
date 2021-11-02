@@ -39,8 +39,6 @@ def task_build():
         build_wheel(
             src_dir=src_py_dir,
             dst_dir=build_dir / 'py',
-            src_paths=list(common.path_rglob(src_py_dir,
-                                             blacklist={'__pycache__'})),
             name='hat-stc',
             description='Hat statechart engine',
             url='https://github.com/hat-open/hat-stc',
