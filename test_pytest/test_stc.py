@@ -92,6 +92,7 @@ def test_parse_scxml(scxml, states):
 async def test_empty():
     machine = stc.Statechart([], {})
     assert machine.state is None
+    assert machine.finished
     await asyncio.wait_for(machine.run(), 0.01)
 
 
@@ -107,19 +108,22 @@ async def test_single_state():
                'exit': lambda _, e: queue.put_nowait(('exit', e)),
                'transit': lambda _, e: queue.put_nowait(('transit', e))}
     machine = stc.Statechart(states, actions)
-    assert machine.state is None
+    assert not machine.finished
+    assert machine.state == 's1'
 
-    f = asyncio.ensure_future(machine.run())
     a, e = await queue.get()
     assert a == 'enter'
     assert e is None
-    assert machine.state == 's1'
 
-    await asyncio.sleep(0.001)
-    assert queue.empty()
+    assert not machine.step()
+    assert machine.state == 's1'
 
     event = stc.Event('e1', None)
     machine.register(event)
+
+    assert queue.empty()
+    assert not machine.step()
+
     a, e = await queue.get()
     assert (a, e) == ('exit', event)
     a, e = await queue.get()
@@ -128,28 +132,26 @@ async def test_single_state():
     assert (a, e) == ('enter', event)
     assert machine.state == 's1'
 
-    await asyncio.sleep(0.001)
-    assert queue.empty()
-
     event = stc.Event('e2', 123)
     machine.register(event)
+
+    assert queue.empty()
+    assert not machine.step()
+
     a, e = await queue.get()
     assert (a, e) == ('transit', event)
     assert machine.state == 's1'
 
-    await asyncio.sleep(0.001)
-    assert queue.empty()
-
     event = stc.Event('e3', None)
     machine.register(event)
+
+    assert queue.empty()
+    assert not machine.step()
+
     assert machine.state == 's1'
 
-    await asyncio.sleep(0.001)
     assert queue.empty()
-
-    f.cancel()
-    with pytest.raises(asyncio.CancelledError):
-        await f
+    assert not machine.step()
 
 
 async def test_nested_states():
@@ -185,9 +187,6 @@ async def test_nested_states():
                'transit1': lambda _, e: queue.put_nowait(('transit1', e)),
                'transit2': lambda _, e: queue.put_nowait(('transit2', e))}
     machine = stc.Statechart(states, actions)
-    assert machine.state is None
-
-    f = asyncio.ensure_future(machine.run())
     a, e = await queue.get()
     assert (a, e) == ('enter_s1', None)
     a, e = await queue.get()
@@ -195,6 +194,8 @@ async def test_nested_states():
     a, e = await queue.get()
     assert (a, e) == ('enter_s3', None)
     assert machine.state == 's3'
+
+    f = asyncio.ensure_future(machine.run())
 
     await asyncio.sleep(0.001)
     assert queue.empty()

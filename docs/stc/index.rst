@@ -113,10 +113,19 @@ creating arbitrary number of mutually independent instances.
 Running statechart
 ''''''''''''''''''
 
-Execution of statechart logic is controlled with execution of
-`hat.stc.Statechart.run` coroutine. Once started, statechart will transition
-to initial state and wait for registered events that will cause state
-transitions:
+Execution of statechart logic can be controlled with:
+
+    * `hat.stc.Statechart.run` coroutine
+    * `hat.stc.Statechart.step` method
+
+During initialization, statechart will transition to initial state.
+
+If `hat.stc.Statechart.step` method is used for executing statechart logic,
+user is responsible for repetitive calling of `step` method which processes
+one event at the time.
+
+Alternatively, `hat.stc.Statechart.run` coroutine can be used. Once started,
+it will wait for registered events and process state transitions:
 
 .. literalinclude:: tutorial_02.py
     :language: python

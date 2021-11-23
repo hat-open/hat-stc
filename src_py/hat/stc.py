@@ -100,11 +100,13 @@ class Statechart:
     Each instance is initialized with state definitions (first state is
     considered initial) and action and condition definitions.
 
-    Statechart execution is simulated by calling `Statechart.run` coroutine.
-    When this coroutine is called, statechart will transition to initial state
-    and wait for new event occurrences. Coroutine `run` continues execution
-    until statechart transitions to final state. Once final state is reached,
-    `Statechart.run` finishes execution.
+    During initialization, statechart will transition to initial state.
+
+    Statechart execution is simulated by repetitive calling of
+    `Statechart.step` method. Alternatively, `Statechart.run` coroutine can
+    be used for waiting and processing new event occurrences. Coroutine `run`
+    continues execution until statechart transitions to final state. Once final
+    state is reached, `Statechart.run` finishes execution.
 
     New events are registered with `Statechart.register` method which accepts
     event instances containing event name and optional event payload. All event
@@ -128,8 +130,8 @@ class Statechart:
                  actions: typing.Dict[str, Action],
                  conditions: typing.Dict[str, Condition] = {}):
         states = collections.deque(states)
+        initial = states[0].name if states else None
 
-        self._initial = states[0].name if states else None
         self._actions = actions
         self._conditions = conditions
         self._states = {}
@@ -143,38 +145,58 @@ class Statechart:
             self._states[state.name] = state
             self._parents.update({i.name: state.name for i in state.children})
 
+        if initial:
+            self._walk_down(initial, None)
+
     @property
     def state(self) -> typing.Optional[StateName]:
         """Current state"""
         return self._stack[-1] if self._stack else None
 
+    @property
+    def finished(self) -> bool:
+        """Is statechart in final state"""
+        state = self.state
+        return not state or self._states[state].final
+
     def register(self, event: Event):
         """Add event to queue"""
         self._queue.put_nowait(event)
 
+    def step(self) -> bool:
+        """Process next queued event
+
+        Returns ``False`` if event queue is empty.
+
+        """
+        if self._queue.empty():
+            return False
+        event = self._queue.get_nowait()
+        if not self.finished:
+            self._step(event)
+        return not self._queue.empty()
+
     async def run(self):
-        """Run statechart
+        """Run statechart step loop
 
         This coroutine finishes once statechart enters final state.
 
         """
-        self._walk_up(None, None)
-        self._walk_down(self._initial, None)
-        while True:
-            state = self.state
-            if not state or self._states[state].final:
-                break
+        while not self.finished:
             event = await self._queue.get()
-            state, transition = self._find_state_transition(state, event)
-            if not transition:
-                continue
-            if transition.target:
-                ancestor = self._find_ancestor(state, transition.target,
-                                               transition.internal)
-                self._walk_up(ancestor, event)
-            self._exec_actions(transition.actions, event)
-            if transition.target:
-                self._walk_down(transition.target, event)
+            self._step(event)
+
+    def _step(self, event):
+        state, transition = self._find_state_transition(self.state, event)
+        if not transition:
+            return
+        if transition.target:
+            ancestor = self._find_ancestor(state, transition.target,
+                                           transition.internal)
+            self._walk_up(ancestor, event)
+        self._exec_actions(transition.actions, event)
+        if transition.target:
+            self._walk_down(transition.target, event)
 
     def _walk_up(self, target, event):
         while self.state != target:
@@ -183,9 +205,6 @@ class Statechart:
             self._stack.pop()
 
     def _walk_down(self, target, event):
-        target = target or self._initial
-        if not target:
-            return
         states = collections.deque([self._states[target]])
         while ((state := states[0]).name != self.state and
                 (parent := self._parents.get(state.name))):
