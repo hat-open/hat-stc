@@ -1,2 +1,2 @@
-hat-aio >= 0.5.1
-hat-util >= 0.5.4
+hat-aio ~= 0.6.0
+hat-util ~= 0.5.5
