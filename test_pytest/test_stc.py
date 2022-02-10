@@ -7,9 +7,6 @@ from hat import aio
 from hat import stc
 
 
-pytestmark = pytest.mark.asyncio
-
-
 @pytest.mark.parametrize("scxml, states", [
     (r"""<?xml version="1.0" encoding="UTF-8"?>
         <scxml xmlns="http://www.w3.org/2005/07/scxml" version="1.0">
