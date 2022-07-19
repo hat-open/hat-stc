@@ -1,14 +1,12 @@
 from pathlib import Path
 import subprocess
-import sys
 
 from hat.doit import common
+from hat.doit.docs import (build_sphinx,
+                           build_pdoc)
 from hat.doit.py import (build_wheel,
                          run_pytest,
                          run_flake8)
-from hat.doit.docs import (SphinxOutputType,
-                           build_sphinx,
-                           build_pdoc)
 
 
 __all__ = ['task_clean_all',
@@ -42,8 +40,7 @@ def task_build():
             name='hat-stc',
             description='Hat statechart engine',
             url='https://github.com/hat-open/hat-stc',
-            license=common.License.APACHE2,
-            packages=['hat'])
+            license=common.License.APACHE2)
 
     return {'actions': [build]}
 
@@ -62,8 +59,20 @@ def task_test():
 
 def task_docs():
     """Docs"""
-    return {'actions': [(build_sphinx, [SphinxOutputType.HTML,
-                                        docs_dir,
-                                        build_docs_dir]),
-                        (build_pdoc, ['hat.stc',
-                                      build_docs_dir / 'py_api'])]}
+
+    def build():
+        p = subprocess.run(['which', 'drawio'],
+                           capture_output=True,
+                           check=True)
+        drawio_binary_path = p.stdout.decode('utf-8').strip()
+
+        build_sphinx(src_dir=docs_dir,
+                     dst_dir=build_docs_dir,
+                     project='hat-stc',
+                     extensions=['sphinxcontrib.drawio'],
+                     conf={'drawio_binary_path': drawio_binary_path})
+
+        build_pdoc(module='hat.stc',
+                   dst_dir=build_docs_dir / 'py_api')
+
+    return {'actions': [build]}
