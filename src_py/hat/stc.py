@@ -7,24 +7,19 @@ import typing
 import xml.etree.ElementTree
 
 from hat import aio
-from hat import util
 
 
-EventName = str
+EventName: typing.TypeAlias = str
 """Event name"""
-util.register_type_alias('EventName')
 
-StateName = str
+StateName: typing.TypeAlias = str
 """State name"""
-util.register_type_alias('StateName')
 
-ActionName = str
+ActionName: typing.TypeAlias = str
 """Action name"""
-util.register_type_alias('ActionName')
 
-ConditionName = str
+ConditionName: typing.TypeAlias = str
 """Condition name"""
-util.register_type_alias('ConditionName')
 
 
 class Event(typing.NamedTuple):
@@ -40,13 +35,13 @@ class Transition(typing.NamedTuple):
     event: EventName
     """Event identifier. Occurrence of event with this exact identifier can
     trigger state transition."""
-    target: typing.Optional[StateName]
+    target: StateName | None
     """Destination state identifier. If destination state is not defined,
     local transition is assumed - state is not changed and transition
     actions are triggered."""
-    actions: typing.List[ActionName] = []
+    actions: list[ActionName] = []
     """Actions executed on transition."""
-    conditions: typing.List[ConditionName] = []
+    conditions: list[ConditionName] = []
     """List of conditions. Transition is triggered only if all provided
     conditions are met."""
     internal: bool = False
@@ -62,17 +57,17 @@ class State(typing.NamedTuple):
     children: typing.List['State'] = []
     """Optional child states. If state has children, first child is
     considered as its initial state."""
-    transitions: typing.List[Transition] = []
+    transitions: list[Transition] = []
     """Possible transitions to other states."""
-    entries: typing.List[ActionName] = []
+    entries: list[ActionName] = []
     """Actions executed when state is entered."""
-    exits: typing.List[ActionName] = []
+    exits: list[ActionName] = []
     """Actions executed when state is exited."""
     final: bool = False
     """Is state final."""
 
 
-Action = typing.Callable[['Statechart', typing.Optional[Event]], None]
+Action: typing.TypeAlias = typing.Callable[['Statechart', Event | None], None]
 """Action function
 
 Action implementation which can be executed as part of entering/exiting
@@ -81,9 +76,9 @@ state or transition execution. It is called with statechart instance and
 transition to initial state, it is called with ``None``.
 
 """
-util.register_type_alias('Action')
 
-Condition = typing.Callable[['Statechart', typing.Optional[Event]], bool]
+Condition: typing.TypeAlias = typing.Callable[['Statechart', Event | None],
+                                              bool]
 """Condition function
 
 Condition implementation used as transition guard. It is called with statechart
@@ -91,7 +86,6 @@ instance and `Event` which triggered transition. Return value ``True`` is
 interpreted as satisfied condition.
 
 """
-util.register_type_alias('Condition')
 
 
 class Statechart:
@@ -127,8 +121,8 @@ class Statechart:
 
     def __init__(self,
                  states: typing.Iterable[State],
-                 actions: typing.Dict[str, Action],
-                 conditions: typing.Dict[str, Condition] = {}):
+                 actions: dict[str, Action],
+                 conditions: dict[str, Condition] = {}):
         states = collections.deque(states)
         initial = states[0].name if states else None
 
@@ -149,7 +143,7 @@ class Statechart:
             self._walk_down(initial, None)
 
     @property
-    def state(self) -> typing.Optional[StateName]:
+    def state(self) -> StateName | None:
         """Current state"""
         return self._stack[-1] if self._stack else None
 
@@ -252,8 +246,7 @@ class Statechart:
             action(self, event)
 
 
-def parse_scxml(scxml: typing.Union[typing.TextIO, pathlib.Path]
-                ) -> typing.List[State]:
+def parse_scxml(scxml: typing.TextIO | pathlib.Path) -> list[State]:
     """Parse SCXML into list of state definitions"""
     if isinstance(scxml, pathlib.Path):
         with open(scxml, encoding='utf-8') as f:
