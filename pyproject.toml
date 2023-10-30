@@ -1,6 +1,6 @@
 [project]
 name = "hat-stc"
-version = "0.6.4"
+version = "0.7.0"
 description = "Hat statechart engine"
 readme = "README.rst"
 requires-python = ">=3.10"
@@ -19,7 +19,7 @@ Documentation = "http://hat-stc.hat-open.com"
 [project.optional-dependencies]
 dev = [
     "hat-doit ~=0.15.4",
-    "sphinxcontrib-drawio >= 0.0.16",
+    "sphinxcontrib-drawio >=0.0.16",
 ]
 
 [build-system]

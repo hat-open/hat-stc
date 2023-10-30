@@ -11,34 +11,35 @@ class Door:
                    'logTransition': self._act_log_transition,
                    'startTimer': self._act_start_timer}
         self._stc = hat.stc.Statechart(door_states, actions)
-        self._run_task = asyncio.create_task(self._stc.run())
+        self._runner = hat.stc.AsyncRunner()
 
-    def finish(self):
-        self._run_task.cancel()
+    async def finish(self):
+        await self._runner.async_close()
 
     def close(self, force):
         print('registering close event')
-        self._stc.register(hat.stc.Event('close', force))
+        self._runner.register(self._stc, hat.stc.Event('close', force))
 
     def open(self, force):
         print('registering open event')
-        self._stc.register(hat.stc.Event('open', force))
+        self._runner.register(self._stc, hat.stc.Event('open', force))
 
-    def _act_log_enter(self, inst, evt):
-        print(f'entering state {self._stc.state}')
+    def _act_log_enter(self, stc, evt):
+        print(f'entering state {stc.state}')
 
-    def _act_log_exit(self, inst, evt):
-        print(f'exiting state {self._stc.state}')
+    def _act_log_exit(self, stc, evt):
+        print(f'exiting state {stc.state}')
 
-    def _act_log_transition(self, inst, evt):
+    def _act_log_transition(self, stc, evt):
         print(f'transitioning because of event {evt}')
 
-    def _act_start_timer(self, inst, evt):
+    def _act_start_timer(self, stc, evt):
         force = evt.payload
         delay = force_to_delay(force)
         print(f'waiting for {delay} seconds')
         loop = asyncio.get_event_loop()
-        loop.call_later(delay, self._stc.register, hat.stc.Event('timeout'))
+        loop.call_later(delay, self._runner.register, self._stc,
+                        hat.stc.Event('timeout'))
 
 def force_to_delay(force):
     if force <= 0:
@@ -57,7 +58,7 @@ async def main():
     door.open(60)
     await asyncio.sleep(1)
 
-    door.finish()
+    await door.finish()
 
 if __name__ == '__main__':
     asyncio.run(main())

@@ -1,7 +1,6 @@
-import asyncio
 import hat.stc
 
-async def main():
+def main():
 
     def act_print_state(door, evt):
         print('current state:', door.state)
@@ -10,18 +9,13 @@ async def main():
     actions = {'printState': act_print_state}
     door = hat.stc.Statechart(states, actions)
 
-    run_task = asyncio.create_task(door.run())
-    await asyncio.sleep(1)
-
     print('registering close event')
-    door.register(hat.stc.Event('close'))
-    await asyncio.sleep(1)
+    event = hat.stc.Event('close')
+    door.step(event)
 
     print('registering open event')
-    door.register(hat.stc.Event('open'))
-    await asyncio.sleep(1)
-
-    run_task.cancel()
+    event = hat.stc.Event('open')
+    door.step(event)
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()

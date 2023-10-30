@@ -1,7 +1,6 @@
-import asyncio
 import hat.stc
 
-async def main():
+def main():
 
     def act_print_state(door, evt):
         print('current state:', door.state)
@@ -13,4 +12,4 @@ async def main():
     # TODO: run statechart
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()

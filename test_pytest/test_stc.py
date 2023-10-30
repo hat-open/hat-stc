@@ -1,9 +1,8 @@
-import asyncio
+import collections
 import io
 
 import pytest
 
-from hat import aio
 from hat import stc
 
 
@@ -86,73 +85,64 @@ def test_parse_scxml(scxml, states):
     assert result == states
 
 
-async def test_empty():
+def test_empty():
     machine = stc.Statechart([], {})
     assert machine.state is None
     assert machine.finished
-    await asyncio.wait_for(machine.run(), 0.01)
 
 
-async def test_single_state():
-    queue = aio.Queue()
+def test_single_state():
+    queue = collections.deque()
     states = [stc.State('s1',
                         transitions=[
                             stc.Transition('e1', 's1', ['transit']),
                             stc.Transition('e2', 's1', ['transit'], [], True)],
                         entries=['enter'],
                         exits=['exit'])]
-    actions = {'enter': lambda _, e: queue.put_nowait(('enter', e)),
-               'exit': lambda _, e: queue.put_nowait(('exit', e)),
-               'transit': lambda _, e: queue.put_nowait(('transit', e))}
+    actions = {'enter': lambda _, e: queue.append(('enter', e)),
+               'exit': lambda _, e: queue.append(('exit', e)),
+               'transit': lambda _, e: queue.append(('transit', e))}
     machine = stc.Statechart(states, actions)
     assert not machine.finished
     assert machine.state == 's1'
 
-    a, e = await queue.get()
+    a, e = queue.popleft()
     assert a == 'enter'
     assert e is None
 
-    assert not machine.step()
-    assert machine.state == 's1'
+    assert not queue
 
     event = stc.Event('e1', None)
-    machine.register(event)
+    machine.step(event)
 
-    assert queue.empty()
-    assert not machine.step()
-
-    a, e = await queue.get()
+    a, e = queue.popleft()
     assert (a, e) == ('exit', event)
-    a, e = await queue.get()
+    a, e = queue.popleft()
     assert (a, e) == ('transit', event)
-    a, e = await queue.get()
+    a, e = queue.popleft()
     assert (a, e) == ('enter', event)
     assert machine.state == 's1'
 
+    assert not queue
+
     event = stc.Event('e2', 123)
-    machine.register(event)
+    machine.step(event)
 
-    assert queue.empty()
-    assert not machine.step()
-
-    a, e = await queue.get()
+    a, e = queue.popleft()
     assert (a, e) == ('transit', event)
     assert machine.state == 's1'
 
+    assert not queue
+
     event = stc.Event('e3', None)
-    machine.register(event)
+    machine.step(event)
 
-    assert queue.empty()
-    assert not machine.step()
-
+    assert not queue
     assert machine.state == 's1'
 
-    assert queue.empty()
-    assert not machine.step()
 
-
-async def test_nested_states():
-    queue = aio.Queue()
+def test_nested_states():
+    queue = collections.deque()
     states = [stc.State(
         's1',
         children=[
@@ -173,68 +163,65 @@ async def test_nested_states():
         transitions=[stc.Transition('e2', 's2', ['transit2'])],
         entries=['enter_s1'],
         exits=['exit_s1'])]
-    actions = {'enter_s1': lambda _, e: queue.put_nowait(('enter_s1', e)),
-               'exit_s1': lambda _, e: queue.put_nowait(('exit_s1', e)),
-               'enter_s2': lambda _, e: queue.put_nowait(('enter_s2', e)),
-               'exit_s2': lambda _, e: queue.put_nowait(('exit_s2', e)),
-               'enter_s3': lambda _, e: queue.put_nowait(('enter_s3', e)),
-               'exit_s3': lambda _, e: queue.put_nowait(('exit_s3', e)),
-               'enter_s4': lambda _, e: queue.put_nowait(('enter_s4', e)),
-               'exit_s4': lambda _, e: queue.put_nowait(('exit_s4', e)),
-               'transit1': lambda _, e: queue.put_nowait(('transit1', e)),
-               'transit2': lambda _, e: queue.put_nowait(('transit2', e))}
+    actions = {'enter_s1': lambda _, e: queue.append(('enter_s1', e)),
+               'exit_s1': lambda _, e: queue.append(('exit_s1', e)),
+               'enter_s2': lambda _, e: queue.append(('enter_s2', e)),
+               'exit_s2': lambda _, e: queue.append(('exit_s2', e)),
+               'enter_s3': lambda _, e: queue.append(('enter_s3', e)),
+               'exit_s3': lambda _, e: queue.append(('exit_s3', e)),
+               'enter_s4': lambda _, e: queue.append(('enter_s4', e)),
+               'exit_s4': lambda _, e: queue.append(('exit_s4', e)),
+               'transit1': lambda _, e: queue.append(('transit1', e)),
+               'transit2': lambda _, e: queue.append(('transit2', e))}
     machine = stc.Statechart(states, actions)
-    a, e = await queue.get()
+
+    a, e = queue.popleft()
     assert (a, e) == ('enter_s1', None)
-    a, e = await queue.get()
+    a, e = queue.popleft()
     assert (a, e) == ('enter_s2', None)
-    a, e = await queue.get()
+    a, e = queue.popleft()
     assert (a, e) == ('enter_s3', None)
     assert machine.state == 's3'
 
-    f = asyncio.ensure_future(machine.run())
-
-    await asyncio.sleep(0.001)
-    assert queue.empty()
+    assert not queue
 
     event = stc.Event('e1', 123)
-    machine.register(event)
-    a, e = await queue.get()
+    machine.step(event)
+
+    a, e = queue.popleft()
     assert (a, e) == ('exit_s3', event)
-    a, e = await queue.get()
+    a, e = queue.popleft()
     assert (a, e) == ('transit1', event)
-    a, e = await queue.get()
+    a, e = queue.popleft()
     assert (a, e) == ('enter_s4', event)
     assert machine.state == 's4'
 
-    await asyncio.sleep(0.001)
-    assert queue.empty()
+    assert not queue
 
     event = stc.Event('e2', 123)
-    machine.register(event)
-    a, e = await queue.get()
+    machine.step(event)
+
+    a, e = queue.popleft()
     assert (a, e) == ('exit_s4', event)
-    a, e = await queue.get()
+    a, e = queue.popleft()
     assert (a, e) == ('exit_s2', event)
-    a, e = await queue.get()
+    a, e = queue.popleft()
     assert (a, e) == ('exit_s1', event)
-    a, e = await queue.get()
+    a, e = queue.popleft()
     assert (a, e) == ('transit2', event)
-    a, e = await queue.get()
+    a, e = queue.popleft()
     assert (a, e) == ('enter_s1', event)
-    a, e = await queue.get()
+    a, e = queue.popleft()
     assert (a, e) == ('enter_s2', event)
-    a, e = await queue.get()
+    a, e = queue.popleft()
     assert (a, e) == ('enter_s3', event)
     assert machine.state == 's3'
 
-    f.cancel()
-    with pytest.raises(asyncio.CancelledError):
-        await f
+    assert not queue
 
 
-async def test_conditions():
-    queue = aio.Queue()
+def test_conditions():
+    queue = collections.deque()
     states = [stc.State(
         's1',
         transitions=[
@@ -242,80 +229,68 @@ async def test_conditions():
             stc.Transition('e', 's1', conditions=['c2'], actions=['a2'])])]
     conditions = {'c1': lambda _, e: e.payload == 1,
                   'c2': lambda _, e: e.payload == 2}
-    actions = {'a1': lambda _, e: queue.put_nowait('a1'),
-               'a2': lambda _, e: queue.put_nowait('a2')}
+    actions = {'a1': lambda _, e: queue.append('a1'),
+               'a2': lambda _, e: queue.append('a2')}
 
     machine = stc.Statechart(states, actions, conditions)
-    f = asyncio.ensure_future(machine.run())
 
-    await asyncio.sleep(0.001)
-    assert queue.empty()
+    assert not queue
 
     event = stc.Event('e', 1)
-    machine.register(event)
-    a = await queue.get()
+    machine.step(event)
+
+    a = queue.popleft()
     assert a == 'a1'
 
-    await asyncio.sleep(0.001)
-    assert queue.empty()
+    assert not queue
 
     event = stc.Event('e', 2)
-    machine.register(event)
-    a = await queue.get()
+    machine.step(event)
+
+    a = queue.popleft()
     assert a == 'a2'
 
-    await asyncio.sleep(0.001)
-    assert queue.empty()
+    assert not queue
 
     event = stc.Event('e', 3)
-    machine.register(event)
+    machine.step(event)
 
-    await asyncio.sleep(0.001)
-    assert queue.empty()
-
-    f.cancel()
-    with pytest.raises(asyncio.CancelledError):
-        await f
+    assert not queue
 
 
-async def test_local_transitions():
-    queue = aio.Queue()
+def test_local_transitions():
+    queue = collections.deque()
     states = [stc.State(
         's1',
         entries=['enter'],
         transitions=[
             stc.Transition('e1', 's1', actions=['a1']),
             stc.Transition('e2', None, actions=['a2'])])]
-    actions = {'enter': lambda _, e: queue.put_nowait('enter'),
-               'a1': lambda _, e: queue.put_nowait('a1'),
-               'a2': lambda _, e: queue.put_nowait('a2')}
+    actions = {'enter': lambda _, e: queue.append('enter'),
+               'a1': lambda _, e: queue.append('a1'),
+               'a2': lambda _, e: queue.append('a2')}
 
     machine = stc.Statechart(states, actions)
-    f = asyncio.ensure_future(machine.run())
-    a = await queue.get()
+
+    a = queue.popleft()
     assert a == 'enter'
 
-    await asyncio.sleep(0.001)
-    assert queue.empty()
+    assert not queue
 
     event = stc.Event('e1')
-    machine.register(event)
-    a = await queue.get()
+    machine.step(event)
+
+    a = queue.popleft()
     assert a == 'a1'
-    a = await queue.get()
+    a = queue.popleft()
     assert a == 'enter'
 
-    await asyncio.sleep(0.001)
-    assert queue.empty()
+    assert not queue
 
     event = stc.Event('e2')
-    machine.register(event)
-    a = await queue.get()
+    machine.step(event)
+
+    a = queue.popleft()
     assert a == 'a2'
 
-    await asyncio.sleep(0.001)
-    assert queue.empty()
-
-    f.cancel()
-    with pytest.raises(asyncio.CancelledError):
-        await f
+    assert not queue

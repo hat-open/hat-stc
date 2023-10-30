@@ -1,5 +1,3 @@
-.. _hat-stc:
-
 `hat.stc` - Python statechart library
 =====================================
 
@@ -113,10 +111,7 @@ creating arbitrary number of mutually independent instances.
 Running statechart
 ''''''''''''''''''
 
-Execution of statechart logic can be controlled with:
-
-    * `hat.stc.Statechart.run` coroutine
-    * `hat.stc.Statechart.step` method
+Execution of statechart logic is controlled `hat.stc.Statechart.step` method.
 
 During initialization, statechart will transition to initial state.
 
@@ -124,13 +119,10 @@ If `hat.stc.Statechart.step` method is used for executing statechart logic,
 user is responsible for repetitive calling of `step` method which processes
 one event at the time.
 
-Alternatively, `hat.stc.Statechart.run` coroutine can be used. Once started,
-it will wait for registered events and process state transitions:
-
 .. literalinclude:: tutorial_02.py
     :language: python
     :caption: :download:`tutorial_02.py - snippet <tutorial_02.py>`
-    :lines: 13-24
+    :lines: 12-18
 
 By executing this example, following output can be expected::
 
@@ -150,14 +142,18 @@ functionality as single class:
 .. literalinclude:: tutorial_03.py
     :language: python
     :caption: :download:`tutorial_03.py - snippet <tutorial_03.py>`
-    :lines: 4-25
+    :lines: 3-25
+
+In this example, we have used `hat.stc.SyncRunner` as example of simple
+event queue. With `hat.stc.SyncRunner.register` method, events are added
+to end of the queue which is emptied in FIFO manner.
 
 Now we can instantiate and test our simple door:
 
 .. literalinclude:: tutorial_03.py
     :language: python
     :caption: :download:`tutorial_03.py - snippet <tutorial_03.py>`
-    :lines: 28-37
+    :lines: 28-35
 
 This execution produces same result as our previous example::
 
@@ -188,7 +184,7 @@ Now our test sequence:
 .. literalinclude:: tutorial_04.py
     :language: python
     :caption: :download:`tutorial_04.py - snippet <tutorial_04.py>`
-    :lines: 30-39
+    :lines: 29-38
 
 results in::
 
@@ -198,29 +194,27 @@ results in::
     registering open event
     force 20 caused transition to opened
 
-Each instance of `hat.std.Statechart` has it's own event queue. All registered
+Each instance of `hat.std.SyncRunner` has it's own event queue. All registered
 events are added to the end of this queue. During execution of
-`hat.stc.Statechart.run`, events are taken one at the time from begging of
+`Door.run`, events are taken one at the time from begging of
 event queue and checked for possible transitions. When transition is found,
 it will cause statechart instance to change it's state and execute all
 appropriate actions. If transition paired with event could not be found,
 event is discarded and statechart doesn't change it's state. Once all events
-from the event queue are processed, `hat.stc.Statechart.run` will wait for
-new events to be added to event queue.
+from the event queue are processed, `Door.run` will finish execution.
 
-Taking this into account, by omitting `asyncio.sleep` calls between
-opening/closing doors, we can expect same transitions. Therefore:
+Taking this into account, execution of:
 
 .. literalinclude:: tutorial_04.py
     :language: python
     :caption: :download:`tutorial_04.py - snippet <tutorial_04.py>`
-    :lines: 43-48
+    :lines: 40-46
 
 results in::
 
+    force None caused transition to opened
     registering close event
     registering open event
-    force None caused transition to opened
     force 20 caused transition to closed
     force 50 caused transition to opened
 
@@ -230,15 +224,15 @@ this operations will be ignored. Therefore:
 .. literalinclude:: tutorial_04.py
     :language: python
     :caption: :download:`tutorial_04.py - snippet <tutorial_04.py>`
-    :lines: 52-59
+    :lines: 48-56
 
 results in::
 
-    registering open event
-    registering close event
-    registering close event
-    registering open event
     force None caused transition to opened
+    registering open event
+    registering close event
+    registering close event
+    registering open event
     force 20 caused transition to closed
     force 40 caused transition to opened
 
@@ -266,20 +260,21 @@ will inform us when state is entered (``logEnter``), state is exited
 In addition to this logging actions, states `closing` and `opening` have
 additional action responsible for starting timer with calculated timer delay.
 
-To implement timer behaviour, we will be using asyncio `loop.call_later
-<https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.call_later>`_ .
+To implement timer behavior, we will be using asyncio `loop.call_later
+<https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.call_later>`_
+and `hat.stc.AsyncRunner`.
 
 .. literalinclude:: tutorial_05.py
     :language: python
     :caption: :download:`tutorial_05.py - snippet <tutorial_05.py>`
-    :lines: 4-48
+    :lines: 4-49
 
 Execution our simple testing sequence:
 
 .. literalinclude:: tutorial_05.py
     :language: python
     :caption: :download:`tutorial_05.py - snippet <tutorial_05.py>`
-    :lines: 51-60
+    :lines: 52-61
 
 will result in::
 
@@ -511,8 +506,8 @@ next operation will permanently disable the door instance.
 
 For those cases where future changes of statechart states is no longer
 possible, final state can be used. Final state is state as any other with
-one exception, once the statechart enters this state, `hat.stc.Statechart.run`
-will cease its execution.
+one exception, once the statechart enters this state, following transitions
+are not possible.
 
 .. drawio-image:: tutorial.drawio
    :page-index: 5
@@ -534,7 +529,7 @@ Execution of testing sequence
 .. literalinclude:: tutorial_09.py
     :language: python
     :caption: :download:`tutorial_09.py - snippet <tutorial_09.py>`
-    :lines: 79-97
+    :lines: 79-99
 
 produces following output::
 
