@@ -5,7 +5,7 @@ description = "Hat statechart engine"
 readme = "README.rst"
 requires-python = ">=3.10"
 license = {text = "Apache-2.0"}
-dependencies = ["hat-aio ~= 0.7.8"]
+dependencies = ["hat-aio ~= 0.7.9"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: Apache Software License"
@@ -18,12 +18,12 @@ Documentation = "http://hat-stc.hat-open.com"
 
 [project.optional-dependencies]
 dev = [
-    "hat-doit ~=0.15.4",
+    "hat-doit ~=0.15.11",
     "sphinxcontrib-drawio >=0.0.16",
 ]
 
 [build-system]
-requires = ["hat-doit ~=0.15.4"]
+requires = ["hat-doit ~=0.15.11"]
 build-backend = "hat.doit.pep517"
 
 [tool.pytest.ini_options]
