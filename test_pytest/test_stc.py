@@ -3,6 +3,8 @@ import io
 
 import pytest
 
+from hat import aio
+
 from hat import stc
 
 
@@ -294,3 +296,51 @@ def test_local_transitions():
     assert a == 'a2'
 
     assert not queue
+
+
+async def test_async_timer():
+    event_queue = aio.Queue()
+
+    runner = stc.AsyncRunner()
+
+    timer1 = stc.AsyncTimer(runner=runner,
+                            event='t1',
+                            duration=0.01)
+    timer2 = stc.AsyncTimer(runner=runner,
+                            event='t2',
+                            duration=0.02)
+
+    states = [
+        stc.State('s1',
+                  entries=['start_t1',
+                           'start_t2'],
+                  exits=['stop_t1',
+                         'stop_t2'],
+                  transitions=[stc.Transition('t1', 's2',
+                                              actions=['set_event'],
+                                              conditions=['t1']),
+                               stc.Transition('t2', 's2',
+                                              actions=['set_event'],
+                                              conditions=['t2'])]),
+        stc.State('s2',
+                  entries=['start_t2'],
+                  exits=['stop_t2'],
+                  transitions=[stc.Transition('t2', 's1',
+                                              actions=['set_event'],
+                                              conditions=['t2'])])]
+    actions = {'set_event': lambda _, e: event_queue.put_nowait(e.name),
+               'start_t1': timer1.start,
+               'start_t2': timer2.start,
+               'stop_t1': timer1.stop,
+               'stop_t2': timer2.stop}
+    conditions = {'t1': timer1.condition,
+                  't2': timer2.condition}
+
+    machine = stc.Statechart(states, actions, conditions)  # NOQA
+
+    for _ in range(2):
+        for i in ['t1', 't2']:
+            event = await event_queue.get()
+            assert event == i
+
+    await runner.async_close()

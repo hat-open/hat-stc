@@ -1,14 +1,15 @@
 """Statechart module"""
 
+from collections.abc import Callable, Iterable
 import collections
 import typing
 
 from hat.stc.common import StateName, ActionName, ConditionName, Event, State
 
 
-Action: typing.TypeAlias = typing.Callable[['Statechart',
-                                            Event | None],
-                                           None]
+Action: typing.TypeAlias = Callable[['Statechart',
+                                     Event | None],
+                                    None]
 """Action function
 
 Action implementation which can be executed as part of entering/exiting
@@ -18,9 +19,9 @@ transition to initial state, it is called with ``None``.
 
 """
 
-Condition: typing.TypeAlias = typing.Callable[['Statechart',
-                                               Event | None],
-                                              bool]
+Condition: typing.TypeAlias = Callable[['Statechart',
+                                        Event | None],
+                                       bool]
 """Condition function
 
 Condition implementation used as transition guard. It is called with statechart
@@ -56,7 +57,7 @@ class Statechart:
     """
 
     def __init__(self,
-                 states: typing.Iterable[State],
+                 states: Iterable[State],
                  actions: dict[ActionName, Action],
                  conditions: dict[ConditionName, Condition] = {}):
         states = collections.deque(states)

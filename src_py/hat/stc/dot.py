@@ -1,9 +1,9 @@
-import typing
+from collections.abc import Iterable
 
 from hat.stc.common import State
 
 
-def create_dot_graph(states: typing.Iterable[State]) -> str:
+def create_dot_graph(states: Iterable[State]) -> str:
     """Create DOT representation of statechart"""
     state_name_ids = {}
     id_prefix = 'state'

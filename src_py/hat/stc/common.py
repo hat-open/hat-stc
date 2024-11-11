@@ -1,3 +1,4 @@
+from collections.abc import Collection
 import typing
 
 
@@ -31,9 +32,9 @@ class Transition(typing.NamedTuple):
     """Destination state identifier. If destination state is not defined,
     local transition is assumed - state is not changed and transition
     actions are triggered."""
-    actions: list[ActionName] = []
+    actions: Collection[ActionName] = []
     """Actions executed on transition."""
-    conditions: list[ConditionName] = []
+    conditions: Collection[ConditionName] = []
     """List of conditions. Transition is triggered only if all provided
     conditions are met."""
     internal: bool = False
@@ -46,14 +47,14 @@ class State(typing.NamedTuple):
     """State definition"""
     name: StateName
     """Unique state identifier."""
-    children: typing.List['State'] = []
+    children: Collection['State'] = []
     """Optional child states. If state has children, first child is
     considered as its initial state."""
-    transitions: list[Transition] = []
+    transitions: Collection[Transition] = []
     """Possible transitions to other states."""
-    entries: list[ActionName] = []
+    entries: Collection[ActionName] = []
     """Actions executed when state is entered."""
-    exits: list[ActionName] = []
+    exits: Collection[ActionName] = []
     """Actions executed when state is exited."""
     final: bool = False
     """Is state final."""

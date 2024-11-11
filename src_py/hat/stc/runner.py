@@ -1,10 +1,12 @@
+import asyncio
 import collections
+import itertools
 import logging
 
 from hat import aio
 
-from hat.stc.common import Event
-from hat.stc.statechart import Statechart
+from hat.stc.common import EventName, Event
+from hat.stc.statechart import Action, Condition, Statechart
 
 
 mlog = logging.getLogger(__name__)
@@ -62,3 +64,66 @@ class AsyncRunner(aio.Resource):
         finally:
             self.close()
             self._queue.close()
+
+
+class AsyncTimer(aio.Resource):
+
+    def __init__(self,
+                 runner: AsyncRunner,
+                 event: EventName,
+                 duration: float):
+        self._runner = runner
+        self._event = event
+        self._duration = duration
+        self._loop = asyncio.get_running_loop()
+        self._async_group = runner.async_group.create_subgroup()
+        self._next_tokens = itertools.count(1)
+        self._active_token = None
+        self._timer = None
+
+        self.async_group.spawn(aio.call_on_cancel, self._stop, None, None)
+
+    @property
+    def async_group(self) -> aio.Group:
+        return self._async_group
+
+    @property
+    def start(self) -> Action:
+        return self._start
+
+    @property
+    def stop(self) -> Action:
+        return self._stop
+
+    @property
+    def condition(self) -> Condition:
+        return self._condition
+
+    def _start(self, stc, _):
+        if not self.is_open:
+            return
+
+        if self._timer:
+            self._timer.cancel()
+
+        self._active_token = next(self._next_tokens)
+        self._timer = self._loop.call_later(self._duration, self._on_timer,
+                                            stc, self._active_token)
+
+    def _stop(self, _, __):
+        self._active_token = None
+        if not self._timer:
+            return
+
+        self._timer.cancel()
+        self._timer = None
+
+    def _condition(self, _, event):
+        return bool(event and event.payload == self._active_token)
+
+    def _on_timer(self, stc, token):
+        if not self.is_open:
+            return
+
+        self._runner.register(stc, Event(name=self._event,
+                                         payload=token))

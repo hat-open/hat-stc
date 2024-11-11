@@ -9,7 +9,8 @@ from hat.stc.common import (EventName,
                             State)
 from hat.stc.dot import create_dot_graph
 from hat.stc.runner import (SyncRunner,
-                            AsyncRunner)
+                            AsyncRunner,
+                            AsyncTimer)
 from hat.stc.scxml import parse_scxml
 from hat.stc.statechart import (Action,
                                 Condition,
@@ -26,6 +27,7 @@ __all__ = ['EventName',
            'create_dot_graph',
            'SyncRunner',
            'AsyncRunner',
+           'AsyncTimer',
            'parse_scxml',
            'Action',
            'Condition',
