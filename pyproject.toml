@@ -5,7 +5,7 @@ description = "Hat statechart engine"
 readme = "README.rst"
 requires-python = ">=3.10"
 license = {text = "Apache-2.0"}
-dependencies = ["hat-aio ~=0.7.10"]
+dependencies = ["hat-aio ~=0.7.11"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: Apache Software License"
