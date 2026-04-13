@@ -1,11 +1,11 @@
 [project]
 name = "hat-stc"
-version = "0.7.3"
+version = "0.7.4"
 description = "Hat statechart engine"
 readme = "README.rst"
 requires-python = ">=3.10"
 license = {text = "Apache-2.0"}
-dependencies = ["hat-aio ~=0.7.11"]
+dependencies = ["hat-aio ~=0.7.13"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: Apache Software License"
@@ -16,14 +16,17 @@ Homepage = "http://hat-open.com"
 Repository = "https://github.com/hat-open/hat-stc.git"
 Documentation = "http://hat-stc.hat-open.com"
 
-[project.optional-dependencies]
+[dependency-groups]
+run = ["hat-aio ~=0.7.13"]
+build = ["hat-doit ~=0.16.4"]
 dev = [
-    "hat-doit ~=0.15.18",
+    {include-group = "run"},
+    {include-group = "build"},
     "sphinxcontrib-drawio >=0.0.17",
 ]
 
 [build-system]
-requires = ["hat-doit ~=0.15.18"]
+requires = ["hat-doit ~=0.16.4"]
 build-backend = "hat.doit.pep517"
 
 [tool.pytest.ini_options]
